@@ -289,37 +289,75 @@ export default function App(){
     setTimeout(()=>{initRef.current=false;},1500);
   };
 
-  const createLeague=async()=>{
-    const u=fUN.trim(),t=fTN.trim();
-    if(!valid(u))return setEr("Username 2–24 chars.");
-    if(!valid(t))return setEr("Team name 2–24 chars.");
-    setLd(true);setEr("");
-    try{
-      const c=gc();
-      const league={name:"WC2026 Friendlies",creator:u,code:c,createdAt:Date.now(),members:[{username:u,teamName:t,picks:{},score:0,at:Date.now()}]};
-      await sSet(lKey(c),JSON.stringify(league));
-      await enter(u,t,c,league);
-    }catch(e){setEr(`Failed: ${e?.message||"error"}`);}
+const createLeague = async () => {
+    const u = fUN.trim(), t = fTN.trim();
+    if (!valid(u)) return setEr("Username 2–24 chars.");
+    if (!valid(t)) return setEr("Team name 2–24 chars.");
+    setLd(true); setEr("");
+    try {
+      const c = gc(); // Generates your 6-character code
+      const league = { 
+        name: "WC2026 Friendlies", 
+        creator: u, 
+        code: c, 
+        createdAt: Date.now(), 
+        members: [{ username: u, teamName: t, picks: {}, score: 0, at: Date.now() }] 
+      };
+      
+      // Saved directly to your browser's persistent local storage!
+      localStorage.setItem(`lg_${c}`, JSON.stringify(league));
+      
+      // Simulate your original "enter" function logic to push state to the UI
+      await enter(u, t, c, league);
+    } catch (e) {
+      setEr(`Failed: ${e?.message || "error"}`);
+    }
     setLd(false);
   };
-  const joinLeague=async()=>{
-    const u=fUN.trim(),t=fTN.trim(),c=fJC.trim().toUpperCase();
-    if(!valid(u))return setEr("Username 2–24 chars.");
-    if(!valid(t))return setEr("Team name 2–24 chars.");
-    if(c.length<6)return setEr("Enter the 6-character code.");
-    setLd(true);setEr("");
-    try{
-      const r=await sGet(lKey(c));if(!r){setEr(`No league "${c}".`);setLd(false);return;}
-      const league=JSON.parse(r.value);
-      const byUN=league.members.find(m=>norm(m.username)===norm(u));
-      const byTN=league.members.find(m=>norm(m.teamName||"")===norm(t));
-      if(byUN&&byTN&&norm(byUN.username)===norm(byTN.username)){await enter(byUN.username,byUN.teamName,c,league);setLd(false);return;}
-      if(byUN){setEr(`Username "${u}" taken.`);setLd(false);return;}
-      if(byTN){setEr(`Team name "${t}" taken.`);setLd(false);return;}
-      league.members.push({username:u,teamName:t,picks:{},score:0,at:Date.now()});
-      await sSet(lKey(c),JSON.stringify(league));
-      await enter(u,t,c,JSON.parse((await sGet(lKey(c))).value));
-    }catch(e){setEr(e.message||"Error");}
+
+  const joinLeague = async () => {
+    const u = fUN.trim(), t = fTN.trim(), c = fJC.trim().toUpperCase();
+    if (!valid(u)) return setEr("Username 2–24 chars.");
+    if (!valid(t)) return setEr("Team name 2–24 chars.");
+    if (c.length < 6) return setEr("Enter the 6-character code.");
+    setLd(true); setEr("");
+    try {
+      // Look for the league inside local storage instead of sGet
+      const r = localStorage.getItem(`lg_${c}`);
+      if (!r) {
+        setEr(`No league "${c}".`);
+        setLd(false);
+        return;
+      }
+      
+      const league = JSON.parse(r);
+      const byUN = league.members.find(m => norm(m.username) === norm(u));
+      const byTN = league.members.find(m => norm(m.teamName || "") === norm(t));
+      
+      if (byUN && byTN && norm(byUN.username) === norm(byTN.username)) {
+        await enter(byUN.username, byUN.teamName, c, league);
+        setLd(false);
+        return;
+      }
+      if (byUN) {
+        setEr(`Username "${u}" taken.`);
+        setLd(false);
+        return;
+      }
+      if (byTN) {
+        setEr(`Team name "${t}" taken.`);
+        setLd(false);
+        return;
+      }
+      
+      league.members.push({ username: u, teamName: t, picks: {}, score: 0, at: Date.now() });
+      
+      // Update local storage instead of sSet
+      localStorage.setItem(`lg_${c}`, JSON.stringify(league));
+      await enter(u, t, c, league);
+    } catch (e) {
+      setEr(e.message || "Error");
+    }
     setLd(false);
   };
   const login=async()=>{
